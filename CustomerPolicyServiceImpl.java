@@ -51,9 +51,6 @@ public class CustomerPolicyServiceImpl implements CustomerPolicyService {
 		if (!customer.isPresent()) {
 			return null;
 		}
-		Customer customers = customer.get();
-		customerPolicy.setCustomerId(customers.getCustomerId());
-		customerPolicy.setDateTime(Calendar.getInstance().getTime());
 
 		Map<Long, Double> insurancePaymentMap = new HashMap<>();
 		Map<Long, Double> insurancePaymentResult = new HashMap<>();
@@ -68,12 +65,12 @@ public class CustomerPolicyServiceImpl implements CustomerPolicyService {
 			Optional<Insurances> insurance = typeRepository.findById(insuranceDto.getInsuranceId());
 			Insurances insurances = insurance.get();
 
-			total = total + insuranceDto.getAmount();
+			total = insuranceDto.getAmount();
 
 			insurancePaymentResult = insurancePayment(insurances, insurancePaymentMap, insuranceDto.getAmount());
 
 			customerpolicy.setInsurance(insurance.get());
-			customerpolicy.setPremiumAmount(insuranceDto.getAmount());
+			customerpolicy.setPremiumAmount(total);
 
 			customerpolicy.setStatus("Success");
 			custPolicyRepository.save(customerpolicy);
@@ -98,11 +95,7 @@ public class CustomerPolicyServiceImpl implements CustomerPolicyService {
 			status = bankClient.fundTransfer(fundRequest);
 		}
 
-		// customerPolicy.setStatus(status);
-		customerPolicy.setStatus("Success");
-		// custPolicyRepository.save(customerPolicy);
 		return "Success";
-		// return status;
 	}
 
 	private Map<Long, Double> insurancePayment(Insurances insurances, Map<Long, Double> insurancePaymentMap,
@@ -114,17 +107,16 @@ public class CustomerPolicyServiceImpl implements CustomerPolicyService {
 				Long key = iterator.next();
 				Double value = insurancePaymentMap.get(key);
 				if (key.equals(insurances.getInsurcompany().getCompanyAccountNumber())) {
-					insurancePaymentMap.replace(key, value + Double.valueOf(insurances.getInsuranceId()) * amount);
+					insurancePaymentMap.replace(key, value + Double.valueOf(amount));
 				} else {
 					insurancePaymentMap.put(insurances.getInsurcompany().getCompanyAccountNumber(),
-							Double.valueOf(insurances.getInsuranceId()) * amount);
+							Double.valueOf(amount));
 				}
 			}
 		}
 
 		else {
-			insurancePaymentMap.put(insurances.getInsurcompany().getCompanyAccountNumber(),
-					Double.valueOf(insurances.getInsuranceId()) * amount);
+			insurancePaymentMap.put(insurances.getInsurcompany().getCompanyAccountNumber(), Double.valueOf(amount));
 		}
 
 		return insurancePaymentMap;
